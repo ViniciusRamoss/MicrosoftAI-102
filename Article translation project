@@ -1,0 +1,56 @@
+# Requisição
+import requests
+# Raspagem de Dados
+from bs4 import BeautifulSoup
+# Integração com o chat
+from langchain_openai.chat_models.azure import AzureChatOpenAI
+
+
+# Efetua a requisição para a URL
+def extract_text_from_url(url):
+    response = requests.get(url)
+# Verifica se foi bem sucedida(código 200) 
+    if response.status_code == 200:
+# BeautifulSoup formata o texto e remove os elementos html "script" e "style"
+        soup = BeautifulSoup(response.text, 'html.parser')
+        for script_or_style in soup(["script", "style"]):
+            script_or_style.decompose()
+        texto = soup.get_text(separator= ' ')
+# limpar texto
+        linhas = (line.strip() for line in texto.splitlines())
+        parts = (phrase.strip() for line in linhas for phrase in line.split("  "))
+        texto_limpo = '\n'.join(part for part in parts if part)
+        return texto_limpo
+    else:
+        print(f"Failed to retrieve the URL. Status code: {response.status_code}")
+        return None
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+    text = soup.get_text()
+    return text
+
+client = AzureChatOpenAI(
+    azure_endpoint = "https://testando-001.openai.azure.com/",
+    api_key= "GJr91RHjvGopXdsZTFQSVYqSES4uIexZkfRGZ9tKcUJGRhmpnM37JQQJ99AKACHYHv6XJ3w3AAABACOGkpCc",
+    api_version= "2024-02-15-preview",
+    deployment_name= "gpt-4o-mini",
+    max_retries = 0
+)
+
+def translate_articles(text, lang):
+  messages = [
+      ("system" , "Você atua como tradutor de textos"),
+      ("user", f"Traduza o {text} paro o idioma {lang} e responda em markdown")
+  ]
+
+  response = client.invoke(messages)
+  print(response.content)
+  return response.content
+
+translate_articles("One of the most important aspects when we use it in an Enterprise Environment is, of course, security", "Spanish")
+
+url = "https://dev.to/kenakamu/azure-open-ai-in-vnet-3alo"
+text = extract_text_from_url(url)
+article = translate_articles(text, "Spanish")
+
+print(article)
